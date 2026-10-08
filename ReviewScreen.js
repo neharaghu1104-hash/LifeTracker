@@ -1,0 +1,17 @@
+import { useCallback, useState } from "react";
+import { View, ScrollView, StyleSheet } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
+import Header from "./Header";
+import ThemedText from "./ThemedText";
+import { useTheme } from "./ThemeContext";
+import { loadLifeData, dateRange, dayOf } from "./lifeData";
+
+export default function ReviewScreen() {
+  const { theme } = useTheme(); const [summary, setSummary] = useState(null);
+  useFocusEffect(useCallback(() => { (async()=>{ const d=await loadLifeData(); const days=dateRange(7); let spent=0, steps=0, done=0,total=0,moods=[]; const cat={}; days.forEach(day=>{ (d.expenses||[]).filter(e=>dayOf(e)===day&&e.type!=="income").forEach(e=>{spent+=Number(e.amount||0);cat[e.category]=(cat[e.category]||0)+Number(e.amount||0)}); steps+=Number(d.steps?.[day]||0); const f=d.focus?.[day]||[]; total+=f.length; done+=f.filter(x=>x.completed).length; if(d.mood?.[day]?.mood)moods.push(d.mood[day].mood); }); const top=Object.keys(cat).sort((a,b)=>cat[b]-cat[a])[0]; setSummary({spent,steps,done,total,avgMood:moods.length?(moods.reduce((a,b)=>a+b,0)/moods.length).toFixed(1):"—",top:top||"—",topAmount:top?cat[top]:0}); })(); },[]));
+  if(!summary)return <View style={[styles.container,{backgroundColor:theme.background}]}><Header title="Weekly Review" subtitle="Your last seven days"/></View>;
+  const cards=[{icon:"wallet",value:`₹${summary.spent.toFixed(0)}`,label:"spent"},{icon:"footsteps",value:summary.steps.toLocaleString(),label:"steps"},{icon:"checkmark-circle",value:`${summary.done}/${summary.total}`,label:"focus completed"},{icon:"happy",value:summary.avgMood,label:"avg mood"}];
+  return <View style={[styles.container,{backgroundColor:theme.background}]}><Header title="Weekly Review" subtitle="Your last seven days"/><ScrollView contentContainerStyle={styles.content}><View style={styles.grid}>{cards.map(c=><View key={c.label} style={[styles.card,{backgroundColor:theme.card,borderColor:theme.cardBorder,borderWidth:theme.borderWidth,borderRadius:theme.radius}]}><Ionicons name={c.icon} size={22} color={theme.primary}/><ThemedText style={styles.value}>{c.value}</ThemedText><ThemedText style={{color:theme.subText}}>{c.label}</ThemedText></View>)}</View><View style={[styles.cardWide,{backgroundColor:theme.card,borderColor:theme.cardBorder,borderWidth:theme.borderWidth,borderRadius:theme.radius}]}><ThemedText style={styles.title}>What stood out</ThemedText><ThemedText style={styles.text}>Your biggest spending category was <ThemedText style={{fontWeight:"800"}}>{summary.top}</ThemedText> (₹{summary.topAmount.toFixed(0)}).</ThemedText><ThemedText style={styles.text}>You completed {summary.total?Math.round(summary.done/summary.total*100):0}% of your focus priorities.</ThemedText><ThemedText style={styles.text}>Your average mood was {summary.avgMood}/5.</ThemedText><ThemedText style={[styles.text,{color:theme.subText}]}>Use these numbers as gentle reflection, not a score you have to chase.</ThemedText></View></ScrollView></View>;
+}
+const styles=StyleSheet.create({container:{flex:1},content:{padding:16},grid:{flexDirection:"row",flexWrap:"wrap",gap:10},card:{width:"48%",padding:16},value:{fontSize:24,fontWeight:"900",marginTop:10},cardWide:{marginTop:12,padding:18},title:{fontSize:19,fontWeight:"800",marginBottom:10},text:{fontSize:15,lineHeight:22,marginBottom:9}});

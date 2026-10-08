@@ -1,0 +1,5 @@
+.env
+lifetracker.db
+lifetracker.db-shm
+lifetracker.db-wal
+node_modules/
